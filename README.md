@@ -1,5 +1,7 @@
 # pass-checker
 
+[![version](1.0)]
+
 **See how your password would be cracked.**
 
 A full-stack password security analyzer that goes beyond a strength meter - it tells you *which attack vector* would break your password, estimates crack time on modern GPU hardware, and explains every vulnerability in plain language.
