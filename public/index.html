@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VaultCheck — Password Security Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Variables ─────────────────────────────────────────────────────────── */
+    :root {
+      --bg:         #080b10;
+      --surface:    #0e1420;
+      --surface2:   #141b28;
+      --border:     #1e2a3d;
+      --border2:    #263347;
+      --text:       #c8d8f0;
+      --text-muted: #5a7090;
+      --text-dim:   #3a5070;
+
+      --cyan:    #38d9f5;
+      --cyan-d:  #1a8ca8;
+      --green:   #39e58c;
+      --yellow:  #f5c842;
+      --orange:  #f5813a;
+      --red:     #f54a4a;
+
+      --c-safe:     var(--green);
+      --c-low:      var(--cyan);
+      --c-medium:   var(--yellow);
+      --c-high:     var(--orange);
+      --c-critical: var(--red);
+
+      --mono: "Space Mono", monospace;
+      --sans: "Syne", sans-serif;
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid background ───────────────────────────────────────────────────── */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(56, 217, 245, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 217, 245, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Glow blob ─────────────────────────────────────────────────────────── */
+    body::after {
+      content: "";
+      position: fixed;
+      top: -20%;
+      right: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(56, 217, 245, 0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────────────── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────────── */
+    header {
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      color: var(--cyan);
+    }
+
+    .logo-text {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .tagline {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .tagline em {
+      font-style: normal;
+      color: var(--cyan);
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Input section ─────────────────────────────────────────────────────── */
+    .input-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    .input-section::before {
+      content: "// ENTER PASSWORD TO ANALYZE";
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background: var(--surface);
+      padding: 0 8px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 4px 4px 4px 16px;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(56, 217, 245, 0.08);
+    }
+
+    #password-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      color: var(--text);
+      padding: 10px 0;
+      letter-spacing: 0.05em;
+    }
+
+    #password-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    #toggle-visibility {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    #toggle-visibility:hover {
+      color: var(--cyan);
+      border-color: var(--cyan-d);
+    }
+
+    #toggle-visibility svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* char display */
+    #char-display {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 14px;
+      min-height: 28px;
+    }
+
+    .char {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      animation: charPop 0.15s ease both;
+    }
+
+    @keyframes charPop {
+      from { opacity: 0; transform: translateY(4px) scale(0.85); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .char[data-type="upper"]  { background: rgba(56, 217, 245, 0.12); color: var(--cyan); }
+    .char[data-type="lower"]  { background: rgba(200, 216, 240, 0.07); color: var(--text); }
+    .char[data-type="digit"]  { background: rgba(245, 200, 66, 0.12); color: var(--yellow); }
+    .char[data-type="symbol"] { background: rgba(57, 229, 140, 0.12); color: var(--green); }
+
+    .char-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .legend-item {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 2px;
+    }
+
+    /* ── Empty state ───────────────────────────────────────────────────────── */
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-dim);
+      gap: 12px;
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      opacity: 0.4;
+    }
+
+    .empty-text {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Results panel ─────────────────────────────────────────────────────── */
+    #results-panel {
+      display: none;
+      gap: 20px;
+      flex-direction: column;
+    }
+
+    #results-panel.show {
+      display: flex;
+    }
+
+    /* ── Card ──────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+    }
+
+    .card-label {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    /* ── Score card ────────────────────────────────────────────────────────── */
+    .score-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 20px;
+    }
+
+    .score-bar-track {
+      background: var(--bg);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    #score-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.4s;
+    }
+
+    #score-bar[data-color="safe"]     { background: var(--c-safe); }
+    #score-bar[data-color="low"]      { background: var(--c-low); }
+    #score-bar[data-color="medium"]   { background: var(--c-medium); }
+    #score-bar[data-color="high"]     { background: var(--c-high); }
+    #score-bar[data-color="critical"] { background: var(--c-critical); }
+
+    .score-number {
+      font-family: var(--mono);
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .score-number span {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    #strength-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    #strength-label[data-color="safe"]     { color: var(--c-safe); }
+    #strength-label[data-color="low"]      { color: var(--c-low); }
+    #strength-label[data-color="medium"]   { color: var(--c-medium); }
+    #strength-label[data-color="high"]     { color: var(--c-high); }
+    #strength-label[data-color="critical"] { color: var(--c-critical); }
+
+    /* ── Stats grid ────────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .stat-name {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    #crack-time[data-color="safe"]     { color: var(--c-safe); }
+    #crack-time[data-color="low"]      { color: var(--c-low); }
+    #crack-time[data-color="medium"]   { color: var(--c-medium); }
+    #crack-time[data-color="high"]     { color: var(--c-high); }
+    #crack-time[data-color="critical"] { color: var(--c-critical); }
+
+    #attack-type { color: var(--orange); }
+    #entropy-value, #pool-value, #length-value { color: var(--cyan); }
+
+    /* ── Patterns ──────────────────────────────────────────────────────────── */
+    #patterns-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pattern-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 14px 16px;
+      border-left: 3px solid;
+      animation: slideIn 0.2s ease both;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .pattern-item.critical { border-color: var(--c-critical); }
+    .pattern-item.high     { border-color: var(--c-high); }
+    .pattern-item.medium   { border-color: var(--c-medium); }
+    .pattern-item.low      { border-color: var(--c-low); }
+    .pattern-item.safe     { border-color: var(--c-safe); }
+
+    .pattern-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .pattern-icon {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+
+    .pattern-item.critical .pattern-icon { color: var(--c-critical); }
+    .pattern-item.high     .pattern-icon { color: var(--c-high); }
+    .pattern-item.medium   .pattern-icon { color: var(--c-medium); }
+    .pattern-item.low      .pattern-icon { color: var(--c-low); }
+    .pattern-item.safe     .pattern-icon { color: var(--c-safe); }
+
+    .pattern-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .pattern-badge {
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+
+    .pattern-badge.critical { color: var(--c-critical); border-color: var(--c-critical); background: rgba(245,74,74,0.08); }
+    .pattern-badge.high     { color: var(--c-high);     border-color: var(--c-high);     background: rgba(245,129,58,0.08); }
+    .pattern-badge.medium   { color: var(--c-medium);   border-color: var(--c-medium);   background: rgba(245,200,66,0.08); }
+    .pattern-badge.low      { color: var(--c-low);      border-color: var(--c-low);      background: rgba(56,217,245,0.08); }
+
+    .pattern-detail {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── Suggestion box ────────────────────────────────────────────────────── */
+    #suggestion-box {
+      display: none;
+      background: rgba(57, 229, 140, 0.05);
+      border: 1px solid rgba(57, 229, 140, 0.2);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .suggestion-label {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--green);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .suggestion-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    #suggestion-text {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--green);
+      letter-spacing: 0.05em;
+      flex: 1;
+    }
+
+    #copy-suggestion {
+      background: rgba(57, 229, 140, 0.1);
+      border: 1px solid rgba(57, 229, 140, 0.3);
+      border-radius: 6px;
+      color: var(--green);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 6px 14px;
+      letter-spacing: 0.06em;
+      transition: background 0.2s;
+    }
+
+    #copy-suggestion:hover {
+      background: rgba(57, 229, 140, 0.2);
+    }
+
+    .suggestion-note {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 8px;
+    }
+
+    /* ── Privacy note ──────────────────────────────────────────────────────── */
+    .privacy-note {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 32px;
+      letter-spacing: 0.03em;
+    }
+
+    .privacy-note span {
+      color: var(--cyan-d);
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        <circle cx="12" cy="16" r="1" fill="currentColor"/>
+      </svg>
+      <span class="logo-text">VaultCheck</span>
+    </div>
+    <h1 class="tagline">See exactly <em>how</em><br>your password breaks.</h1>
+    <p class="subtitle">// entropy analysis · attack vector detection · real crack estimates</p>
+  </header>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="input-wrapper">
+      <input
+        id="password-input"
+        type="password"
+        placeholder="type any password..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button id="toggle-visibility" aria-label="Toggle visibility">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="char-display"></div>
+
+    <div class="char-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--cyan)"></div> uppercase
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--text-muted)"></div> lowercase
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--yellow)"></div> digits
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--green)"></div> symbols
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-state">
+    <div class="empty-icon">⬡</div>
+    <p class="empty-text">// awaiting input</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results-panel">
+
+    <!-- Score -->
+    <div class="card">
+      <p class="card-label">// strength score</p>
+      <div class="score-card">
+        <div>
+          <div class="score-bar-track">
+            <div id="score-bar" style="width:0%"></div>
+          </div>
+          <div id="strength-label">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="score-number"><span id="score-value">0</span><span>/100</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <p class="card-label">// threat analysis</p>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-name">crack time (GPU)</div>
+          <div class="stat-value" id="crack-time">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">most likely attack</div>
+          <div class="stat-value" id="attack-type">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">entropy</div>
+          <div class="stat-value" id="entropy-value">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">character pool</div>
+          <div class="stat-value" id="pool-value">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">length</div>
+          <div class="stat-value" id="length-value">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vulnerabilities -->
+    <div class="card">
+      <p class="card-label">// vulnerability breakdown</p>
+      <ul id="patterns-list"></ul>
+    </div>
+
+    <!-- Suggestion -->
+    <div id="suggestion-box">
+      <p class="suggestion-label">// suggested stronger password</p>
+      <div class="suggestion-row">
+        <span id="suggestion-text"></span>
+        <button id="copy-suggestion">copy</button>
+      </div>
+      <p class="suggestion-note">passphrase format: 3 words + number + symbol → high entropy, actually memorable</p>
+    </div>
+
+  </div>
+
+  <!-- Privacy -->
+  <p class="privacy-note">
+    <span>◈</span> passwords are analyzed server-side but <strong>never logged or stored</strong>.
+    all analysis happens in memory and is immediately discarded.
+  </p>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
