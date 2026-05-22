@@ -26,15 +26,15 @@ A full-stack password security analyzer that goes beyond a strength meter - it t
 
 ```
 passchecker/
-├── server.js              ← Express server, one /api/analyze route
+├── server.js              Express server, one /api/analyze route
 ├── package.json
 ├── .gitignore
-├── README.md              ← already written for your GitHub
+├── README.md              
 ├── src/
-│   └── analyzer.js        ← all the brain: entropy, patterns, crack time
+│   └── analyzer.js        all the brain: entropy, patterns, crack time
 └── public/
-    ├── index.html         ← full UI + CSS (dark terminal aesthetic)
-    └── app.js             ← frontend: debounced input, API calls, DOM updates
+    ├── index.html         full UI + CSS (dark terminal)
+    └── app.js             frontend: debounced input, API calls, DOM updates
 ```
 
 ## Getting Started
