@@ -1,6 +1,7 @@
 # pass-checker
 
-[![version](1.0)]
+[![Express Version](https://img.shields.io/npm/v/express.svg)](https://www.npmjs.com/package/express)
+[![CORS Version](https://img.shields.io/npm/v/cors.svg)](https://www.npmjs.com/package/cors)
 
 **See how your password would be cracked.**
 
